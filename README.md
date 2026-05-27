@@ -30,8 +30,19 @@ But it does not use Ariston website. It uses Ariston API what I reversed enginee
 - Ariston Velis Evo
 - Ariston Velis Lux
 - Ariston Lydos Hybrid
+- **Elco Aerotop / other Elco heat pumps and boilers (via Remocon NET)**
 
 Feel free to test something else and create new issue / pull request if something goes wrong.
+
+## Elco Remocon NET Support
+This integration officially supports **Elco** heating and heat pump systems connected through the Remocon NET service.
+
+To set up your Elco system:
+1. Install this integration (via HACS or manually copying the folder).
+2. Go to **Settings -> Devices & Services -> Add Integration -> Ariston**.
+3. Select **Elco Remocon Net** as the **Brand / Service** provider.
+4. Enter your Remocon NET username and password.
+5. Click **Submit**! The integration automatically connects to the correct API endpoint (`https://www.remocon-net.remotethermo.com`) and configures your device, showing **Elco** as the manufacturer for all created entities.
 
 ## Installation
 [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=fustom&repository=ariston-remotethermo-home-assistant-v3&category=integration) or copy ariston folder to your configuration/custom_components path.

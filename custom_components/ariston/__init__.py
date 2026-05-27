@@ -68,7 +68,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Ariston from a config entry."""
     ariston = Ariston()
     try:
-        api_url_setting = entry.data.get(API_URL_SETTING, ARISTON_API_URL)
+        brand = entry.data.get("brand", "ariston")
+        default_api_url = (
+            "https://www.remocon-net.remotethermo.com"
+            if brand == "elco"
+            else ARISTON_API_URL
+        )
+        api_url_setting = entry.data.get(API_URL_SETTING) or default_api_url
 
         api_user_agent = entry.data.get(API_USER_AGENT, ARISTON_USER_AGENT)
 
@@ -100,6 +106,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coordinator = DeviceDataUpdateCoordinator(
             hass, device, scan_interval_seconds, COORDINATOR, device.async_update_state
         )
+        coordinator.brand = brand
 
         hass.data.setdefault(DOMAIN, {}).setdefault(
             entry.unique_id, {COORDINATOR: {}, ENERGY_COORDINATOR: {}}
@@ -118,6 +125,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             BUS_ERRORS_COORDINATOR,
             device.async_get_bus_errors,
         )
+        bus_errors_coordinator.brand = brand
         hass.data[DOMAIN][entry.unique_id][BUS_ERRORS_COORDINATOR] = (
             bus_errors_coordinator
         )
@@ -134,6 +142,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 ENERGY_COORDINATOR,
                 device.async_update_energy,
             )
+            energy_coordinator.brand = brand
             hass.data[DOMAIN][entry.unique_id][ENERGY_COORDINATOR] = energy_coordinator
             await energy_coordinator.async_config_entry_first_refresh()
 
