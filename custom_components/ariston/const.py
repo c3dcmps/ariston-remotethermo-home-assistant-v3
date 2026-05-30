@@ -578,6 +578,13 @@ ARISTON_BINARY_SENSOR_TYPES: list[AristonBinarySensorEntityDescription] = [
         system_types=[SystemType.GALEVO],
     ),
     AristonBinarySensorEntityDescription(
+        key=DeviceProperties.IS_HEATING_PUMP_ON,
+        name=f"{NAME} is heating pump on",
+        icon="mdi:heat-pump-outline",
+        get_is_on=lambda entity: entity.device.is_heating_pump_on_value,
+        system_types=[SystemType.BSB],
+    ),
+    AristonBinarySensorEntityDescription(
         key=DeviceProperties.HOLIDAY,
         name=f"{NAME} holiday mode",
         icon="mdi:island",
