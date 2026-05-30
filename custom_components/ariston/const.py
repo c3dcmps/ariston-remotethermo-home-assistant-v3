@@ -7,6 +7,8 @@ from typing import Any, Final
 
 from ariston.const import (
     ARISTON_BUS_ERRORS,
+    BsbDeviceProperties,
+    BsbZoneProperties,
     ConsumptionProperties,
     ConsumptionType,
     CustomDeviceFeatures,
@@ -60,6 +62,8 @@ API_URL_SETTING: Final[str] = "api_url_setting"
 API_USER_AGENT: Final[str] = "api_user_agent"
 CONF_BRAND: Final[str] = "brand"
 ELCO_API_URL: Final[str] = "https://www.remocon-net.remotethermo.com"
+BSB_PRESET_COMFORT: Final[str] = "Confort"
+BSB_PRESET_REDUCED: Final[str] = "Réduit"
 
 DEFAULT_SCAN_INTERVAL_SECONDS: Final[int] = 180
 DEFAULT_ENERGY_SCAN_INTERVAL_MINUTES: Final[int] = 60
@@ -576,6 +580,35 @@ ARISTON_BINARY_SENSOR_TYPES: list[AristonBinarySensorEntityDescription] = [
         system_types=[SystemType.GALEVO],
     ),
     AristonBinarySensorEntityDescription(
+        key=DeviceProperties.IS_HEATING_PUMP_ON,
+        name=f"{NAME} is heating pump on",
+        icon="mdi:heat-pump-outline",
+        get_is_on=lambda entity: bool(
+            entity.device.data.get(BsbDeviceProperties.HP_ON, False)
+        ),
+        system_types=[SystemType.BSB],
+    ),
+    AristonBinarySensorEntityDescription(
+        key=BsbZoneProperties.HEATING_ON,
+        name=f"{NAME} is heating on",
+        icon="mdi:radiator",
+        get_is_on=lambda entity: bool(
+            entity.device.get_zone(entity.zone).get(BsbZoneProperties.HEATING_ON, False)
+        ),
+        zone=True,
+        system_types=[SystemType.BSB],
+    ),
+    AristonBinarySensorEntityDescription(
+        key=BsbZoneProperties.COOLING_ON,
+        name=f"{NAME} is cooling on",
+        icon="mdi:snowflake",
+        get_is_on=lambda entity: bool(
+            entity.device.get_zone(entity.zone).get(BsbZoneProperties.COOLING_ON, False)
+        ),
+        zone=True,
+        system_types=[SystemType.BSB],
+    ),
+    AristonBinarySensorEntityDescription(
         key=DeviceProperties.HOLIDAY,
         name=f"{NAME} holiday mode",
         icon="mdi:island",
@@ -899,6 +932,45 @@ ARISTON_NUMBER_TYPES: list[AristonNumberEntityDescription] = [
         set_native_value=lambda entity,
         value: entity.device.async_set_cooling_temperature_value(int(value)),
         whe_types=[WheType.LydosHybrid],
+    ),
+    AristonNumberEntityDescription(
+        key="BsbZoneReducedTemp",
+        name=f"{NAME} reduced temperature",
+        icon="mdi:thermometer-chevron-down",
+        entity_category=EntityCategory.CONFIG,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        zone=True,
+        get_native_min_value=lambda entity: entity.device.get_reduced_temp_min(
+            entity.zone
+        ),
+        get_native_max_value=lambda entity: entity.device.get_reduced_temp_max(
+            entity.zone
+        ),
+        get_native_step=lambda entity: entity.device.get_reduced_temp_step(
+            entity.zone
+        ),
+        get_native_value=lambda entity: entity.device.get_reduced_temp_value(
+            entity.zone
+        ),
+        set_native_value=lambda entity, value: entity.device.async_set_reduced_temp(
+            value, entity.zone
+        ),
+        system_types=[SystemType.BSB],
+    ),
+    AristonNumberEntityDescription(
+        key="BsbDhwReducedTemp",
+        name=f"{NAME} DHW reduced temperature",
+        icon="mdi:thermometer-chevron-down",
+        entity_category=EntityCategory.CONFIG,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_features=[CustomDeviceFeatures.HAS_DHW],
+        get_native_min_value=lambda entity: entity.device.water_heater_reduced_minimum_temperature,
+        get_native_max_value=lambda entity: entity.device.water_heater_reduced_maximum_temperature,
+        get_native_step=lambda entity: entity.device.water_heater_reduced_temperature_step,
+        get_native_value=lambda entity: entity.device.water_heater_reduced_temperature,
+        set_native_value=lambda entity,
+        value: entity.device.async_set_water_heater_reduced_temperature(value),
+        system_types=[SystemType.BSB],
     ),
 ]
 
