@@ -904,7 +904,7 @@ ARISTON_NUMBER_TYPES: list[AristonNumberEntityDescription] = [
     ),
     AristonNumberEntityDescription(
         key="BsbZoneReducedTemp",
-        name=f"{NAME} reduced temp",
+        name=f"{NAME} reduced temperature",
         icon="mdi:thermometer-chevron-down",
         entity_category=EntityCategory.CONFIG,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
@@ -928,7 +928,7 @@ ARISTON_NUMBER_TYPES: list[AristonNumberEntityDescription] = [
     ),
     AristonNumberEntityDescription(
         key="BsbDhwReducedTemp",
-        name=f"{NAME} DHW reduced temp",
+        name=f"{NAME} DHW reduced temperature",
         icon="mdi:thermometer-chevron-down",
         entity_category=EntityCategory.CONFIG,
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
