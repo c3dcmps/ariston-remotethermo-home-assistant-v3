@@ -8,6 +8,7 @@ from typing import Any, Final
 from ariston.const import (
     ARISTON_BUS_ERRORS,
     BsbDeviceProperties,
+    BsbZoneMode,
     BsbZoneProperties,
     ConsumptionProperties,
     ConsumptionType,
@@ -223,7 +224,43 @@ ARISTON_WATER_HEATER_TYPES: list[AristonWaterHeaterEntityDescription] = [
     ),
 ]
 
+def _bsb_auto_program_state(entity) -> str | None:
+    """Return 'Comfort' or 'Reduced' for a BSB zone currently in TIME_PROGRAM mode."""
+    if entity.device.get_zone_mode(entity.zone) != BsbZoneMode.TIME_PROGRAM:
+        return None
+    desired = entity.device.get_zone(entity.zone).get(BsbZoneProperties.DESIRED_ROOM_TEMP)
+    if desired is None:
+        return None
+    if desired == entity.device.get_comfort_temp_value(entity.zone):
+        return "Comfort"
+    if desired == entity.device.get_reduced_temp_value(entity.zone):
+        return "Reduced"
+    return None
+
+
 ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
+    AristonSensorEntityDescription(
+        key=BsbZoneProperties.HEATING_ON,
+        name=f"{NAME} zone mode",
+        icon="mdi:thermostat",
+        zone=True,
+        get_native_value=lambda entity: (
+            "Heating"
+            if entity.device.get_zone(entity.zone).get(BsbZoneProperties.HEATING_ON, False)
+            else "Cooling"
+            if entity.device.get_zone(entity.zone).get(BsbZoneProperties.COOLING_ON, False)
+            else "Idle"
+        ),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key=BsbZoneProperties.DESIRED_ROOM_TEMP,
+        name=f"{NAME} auto program state",
+        icon="mdi:calendar-clock",
+        zone=True,
+        get_native_value=lambda entity: _bsb_auto_program_state(entity),
+        system_types=[SystemType.BSB],
+    ),
     AristonSensorEntityDescription(
         key=DeviceProperties.HEATING_CIRCUIT_PRESSURE,
         name=f"{NAME} heating circuit pressure",
