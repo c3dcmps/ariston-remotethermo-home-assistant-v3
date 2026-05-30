@@ -225,6 +225,20 @@ ARISTON_WATER_HEATER_TYPES: list[AristonWaterHeaterEntityDescription] = [
 
 ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
     AristonSensorEntityDescription(
+        key=BsbZoneProperties.HEATING_ON,
+        name=f"{NAME} zone mode",
+        icon="mdi:thermostat",
+        zone=True,
+        get_native_value=lambda entity: (
+            "Heating"
+            if entity.device.get_zone(entity.zone).get(BsbZoneProperties.HEATING_ON, False)
+            else "Cooling"
+            if entity.device.get_zone(entity.zone).get(BsbZoneProperties.COOLING_ON, False)
+            else "Idle"
+        ),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
         key=DeviceProperties.HEATING_CIRCUIT_PRESSURE,
         name=f"{NAME} heating circuit pressure",
         device_class=SensorDeviceClass.PRESSURE,
