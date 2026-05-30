@@ -7,6 +7,7 @@ from typing import Any, Final
 
 from ariston.const import (
     ARISTON_BUS_ERRORS,
+    BsbDeviceProperties,
     ConsumptionProperties,
     ConsumptionType,
     CustomDeviceFeatures,
@@ -581,7 +582,9 @@ ARISTON_BINARY_SENSOR_TYPES: list[AristonBinarySensorEntityDescription] = [
         key=DeviceProperties.IS_HEATING_PUMP_ON,
         name=f"{NAME} is heating pump on",
         icon="mdi:heat-pump-outline",
-        get_is_on=lambda entity: entity.device.is_heating_pump_on_value,
+        get_is_on=lambda entity: bool(
+            entity.device.data.get(BsbDeviceProperties.HP_ON, False)
+        ),
         system_types=[SystemType.BSB],
     ),
     AristonBinarySensorEntityDescription(
