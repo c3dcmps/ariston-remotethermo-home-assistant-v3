@@ -8,6 +8,7 @@ from typing import Any, Final
 from ariston.const import (
     ARISTON_BUS_ERRORS,
     BsbDeviceProperties,
+    BsbZoneProperties,
     ConsumptionProperties,
     ConsumptionType,
     CustomDeviceFeatures,
@@ -585,6 +586,26 @@ ARISTON_BINARY_SENSOR_TYPES: list[AristonBinarySensorEntityDescription] = [
         get_is_on=lambda entity: bool(
             entity.device.data.get(BsbDeviceProperties.HP_ON, False)
         ),
+        system_types=[SystemType.BSB],
+    ),
+    AristonBinarySensorEntityDescription(
+        key=BsbZoneProperties.HEATING_ON,
+        name=f"{NAME} is heating on",
+        icon="mdi:radiator",
+        get_is_on=lambda entity: bool(
+            entity.device.get_zone(entity.zone).get(BsbZoneProperties.HEATING_ON, False)
+        ),
+        zone=True,
+        system_types=[SystemType.BSB],
+    ),
+    AristonBinarySensorEntityDescription(
+        key=BsbZoneProperties.COOLING_ON,
+        name=f"{NAME} is cooling on",
+        icon="mdi:snowflake",
+        get_is_on=lambda entity: bool(
+            entity.device.get_zone(entity.zone).get(BsbZoneProperties.COOLING_ON, False)
+        ),
+        zone=True,
         system_types=[SystemType.BSB],
     ),
     AristonBinarySensorEntityDescription(
