@@ -902,6 +902,45 @@ ARISTON_NUMBER_TYPES: list[AristonNumberEntityDescription] = [
         value: entity.device.async_set_cooling_temperature_value(int(value)),
         whe_types=[WheType.LydosHybrid],
     ),
+    AristonNumberEntityDescription(
+        key="BsbZoneReducedTemp",
+        name=f"{NAME} reduced temp",
+        icon="mdi:thermometer-chevron-down",
+        entity_category=EntityCategory.CONFIG,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        zone=True,
+        get_native_min_value=lambda entity: entity.device.get_reduced_temp_min(
+            entity.zone
+        ),
+        get_native_max_value=lambda entity: entity.device.get_reduced_temp_max(
+            entity.zone
+        ),
+        get_native_step=lambda entity: entity.device.get_reduced_temp_step(
+            entity.zone
+        ),
+        get_native_value=lambda entity: entity.device.get_reduced_temp_value(
+            entity.zone
+        ),
+        set_native_value=lambda entity, value: entity.device.async_set_reduced_temp(
+            value, entity.zone
+        ),
+        system_types=[SystemType.BSB],
+    ),
+    AristonNumberEntityDescription(
+        key="BsbDhwReducedTemp",
+        name=f"{NAME} DHW reduced temp",
+        icon="mdi:thermometer-chevron-down",
+        entity_category=EntityCategory.CONFIG,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        device_features=[CustomDeviceFeatures.HAS_DHW],
+        get_native_min_value=lambda entity: entity.device.water_heater_reduced_minimum_temperature,
+        get_native_max_value=lambda entity: entity.device.water_heater_reduced_maximum_temperature,
+        get_native_step=lambda entity: entity.device.water_heater_reduced_temperature_step,
+        get_native_value=lambda entity: entity.device.water_heater_reduced_temperature,
+        set_native_value=lambda entity,
+        value: entity.device.async_set_water_heater_reduced_temperature(value),
+        system_types=[SystemType.BSB],
+    ),
 ]
 
 ARISTON_SELECT_TYPES: list[AristonSelectEntityDescription] = [
