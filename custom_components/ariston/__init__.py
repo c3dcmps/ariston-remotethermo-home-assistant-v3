@@ -27,11 +27,13 @@ from .const import (
     API_USER_AGENT,
     BUS_ERRORS_COORDINATOR,
     BUS_ERRORS_SCAN_INTERVAL,
+    CONF_BRAND,
     COORDINATOR,
     DEFAULT_BUS_ERRORS_SCAN_INTERVAL_SECONDS,
     DEFAULT_ENERGY_SCAN_INTERVAL_MINUTES,
     DEFAULT_SCAN_INTERVAL_SECONDS,
     DOMAIN,
+    ELCO_API_URL,
     ENERGY_COORDINATOR,
     ENERGY_SCAN_INTERVAL,
 )
@@ -68,12 +70,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Ariston from a config entry."""
     ariston = Ariston()
     try:
-        brand = entry.data.get("brand", "ariston")
-        default_api_url = (
-            "https://www.remocon-net.remotethermo.com"
-            if brand == "elco"
-            else ARISTON_API_URL
-        )
+        brand = entry.data.get(CONF_BRAND, "ariston")
+        default_api_url = ELCO_API_URL if brand == "elco" else ARISTON_API_URL
         api_url_setting = entry.data.get(API_URL_SETTING) or default_api_url
 
         api_user_agent = entry.data.get(API_USER_AGENT, ARISTON_USER_AGENT)

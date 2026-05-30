@@ -39,8 +39,7 @@ class AristonEntity(CoordinatorEntity, ABC):
     @property
     def device_info(self) -> DeviceInfo:
         """Return device specific attributes."""
-        brand = getattr(self.coordinator, "brand", "ariston")
-        manufacturer = "Elco" if brand == "elco" else "Ariston"
+        manufacturer = "Elco" if self.coordinator.brand == "elco" else "Ariston"
         return DeviceInfo(
             identifiers={(DOMAIN, self.device.serial_number or "")},
             manufacturer=manufacturer,
