@@ -101,11 +101,21 @@ class AristonThermostat(AristonEntity, ClimateEntity):
     @property
     def min_temp(self):
         """Return minimum temperature."""
+        if (
+            self.device.system_type == SystemType.BSB
+            and self.device.get_zone_mode(self.zone) == BsbZoneMode.MANUAL_NIGHT
+        ):
+            return self.device.get_reduced_temp_min(self.zone)
         return self.device.get_comfort_temp_min(self.zone)
 
     @property
     def max_temp(self):
         """Return the maximum temperature."""
+        if (
+            self.device.system_type == SystemType.BSB
+            and self.device.get_zone_mode(self.zone) == BsbZoneMode.MANUAL_NIGHT
+        ):
+            return self.device.get_reduced_temp_max(self.zone)
         return self.device.get_comfort_temp_max(self.zone)
 
     @property
@@ -291,6 +301,8 @@ class AristonThermostat(AristonEntity, ClimateEntity):
                 await self.device.async_set_zone_mode(BsbZoneMode.MANUAL, self.zone)
             elif preset_mode == BSB_PRESET_REDUCED:
                 await self.device.async_set_zone_mode(BsbZoneMode.MANUAL_NIGHT, self.zone)
+            else:
+                raise ValueError(f"Unsupported preset mode: {preset_mode}")
             await self.coordinator.async_request_refresh()
             self.async_write_ha_state()
             return
