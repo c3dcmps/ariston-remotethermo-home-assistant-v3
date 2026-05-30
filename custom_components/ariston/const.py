@@ -60,6 +60,8 @@ API_URL_SETTING: Final[str] = "api_url_setting"
 API_USER_AGENT: Final[str] = "api_user_agent"
 CONF_BRAND: Final[str] = "brand"
 ELCO_API_URL: Final[str] = "https://www.remocon-net.remotethermo.com"
+BSB_PRESET_COMFORT: Final[str] = "Confort"
+BSB_PRESET_REDUCED: Final[str] = "Réduit"
 
 DEFAULT_SCAN_INTERVAL_SECONDS: Final[int] = 180
 DEFAULT_ENERGY_SCAN_INTERVAL_MINUTES: Final[int] = 60
