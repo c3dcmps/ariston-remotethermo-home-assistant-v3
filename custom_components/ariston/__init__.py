@@ -19,6 +19,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
+from homeassistant.helpers.update_coordinator import UpdateFailed
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.util.unit_system import METRIC_SYSTEM
 
@@ -142,7 +143,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
             energy_coordinator.brand = brand
             hass.data[DOMAIN][entry.unique_id][ENERGY_COORDINATOR] = energy_coordinator
-            await energy_coordinator.async_config_entry_first_refresh()
+            try:
+                await energy_coordinator.async_config_entry_first_refresh()
+            except (UpdateFailed, Exception) as err:
+                _LOGGER.warning(
+                    "Energy consumption data not available for %s: %s",
+                    device.name,
+                    err,
+                )
 
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
