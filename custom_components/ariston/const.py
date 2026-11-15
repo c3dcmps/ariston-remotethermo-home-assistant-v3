@@ -11,6 +11,7 @@ from ariston.const import (
     BsbZoneMode,
     BsbZoneProperties,
     ConsumptionProperties,
+    ConsumptionTimeInterval,
     ConsumptionType,
     CustomDeviceFeatures,
     DeviceAttribute,
@@ -41,6 +42,7 @@ from homeassistant.components.sensor import (
 from homeassistant.components.switch import SwitchEntityDescription
 from homeassistant.const import UnitOfEnergy, UnitOfTemperature, UnitOfTime
 from homeassistant.helpers.entity import EntityCategory, EntityDescription
+from homeassistant.util import dt as dt_util
 
 try:
     from homeassistant.components.water_heater import WaterHeaterEntityDescription
@@ -79,6 +81,24 @@ ATTR_ERRORS: Final[str] = "errors"
 
 EXTRA_STATE_ATTRIBUTE: Final[str] = "Attribute"
 EXTRA_STATE_DEVICE_METHOD: Final[str] = "DeviceMethod"
+
+
+def _get_dhw_total_energy_today(entity: Any) -> float | None:
+    """Sum the hourly DHW energy readings for today."""
+    for sequence in entity.device.consumptions_sequences:
+        if (
+            sequence.get("k") == ConsumptionType.DOMESTIC_HOT_WATER_TOTAL_ENERGY.value
+            and sequence.get("p") == ConsumptionTimeInterval.LAST_DAY.value
+        ):
+            values = sequence.get("v") or []
+            return round(sum(values), 3) if values else None
+
+    return None
+
+
+def _get_local_day_start(_entity: Any) -> dt.datetime:
+    """Return the local midnight when today's energy total started."""
+    return dt_util.start_of_local_day()
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -426,8 +446,8 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
             ConsumptionType.DOMESTIC_HOT_WATER_TOTAL_ENERGY.name,
         ],
         coordinator=ENERGY_COORDINATOR,
-        get_native_value=lambda entity: entity.device.domestic_hot_water_total_energy_consumption,
-        get_last_reset=lambda entity: entity.device.consumption_sequence_last_changed_utc,
+        get_native_value=_get_dhw_total_energy_today,
+        get_last_reset=_get_local_day_start,
         system_types=[SystemType.GALEVO],
     ),
     AristonSensorEntityDescription(
@@ -556,8 +576,8 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         device_features=[ConsumptionType.DOMESTIC_HOT_WATER_TOTAL_ENERGY.name],
         coordinator=ENERGY_COORDINATOR,
-        get_native_value=lambda entity: entity.device.domestic_hot_water_total_energy_consumption,
-        get_last_reset=lambda entity: entity.device.consumption_sequence_last_changed_utc,
+        get_native_value=_get_dhw_total_energy_today,
+        get_last_reset=_get_local_day_start,
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(
@@ -906,7 +926,7 @@ ARISTON_NUMBER_TYPES: list[AristonNumberEntityDescription] = [
         entity_category=EntityCategory.CONFIG,
         native_min_value=0,
         native_max_value=sys.maxsize,
-        native_step=0.01,
+        native_step=0.0001,
         device_features=[DeviceFeatures.HAS_METERING],
         coordinator=ENERGY_COORDINATOR,
         get_native_value=lambda entity: entity.device.elect_cost,
@@ -922,7 +942,7 @@ ARISTON_NUMBER_TYPES: list[AristonNumberEntityDescription] = [
         entity_category=EntityCategory.CONFIG,
         native_min_value=0,
         native_max_value=sys.maxsize,
-        native_step=0.01,
+        native_step=0.0001,
         device_features=[DeviceFeatures.HAS_METERING],
         coordinator=ENERGY_COORDINATOR,
         get_native_value=lambda entity: entity.device.gas_cost,
