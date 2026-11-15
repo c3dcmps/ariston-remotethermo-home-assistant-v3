@@ -13,10 +13,6 @@ from .const import COORDINATOR, DOMAIN
 
 TO_REDACT = {CONF_PASSWORD, CONF_USERNAME}
 
-# The consumption endpoint answers HTTP 500 for some accounts. Probe a few
-# usage combinations so a diagnostics download shows which one is accepted.
-CONSUMPTION_USAGE_VARIANTS: tuple[str, ...] = ("Ch%2CDhw", "Ch", "Dhw")
-
 
 async def async_get_config_entry_diagnostics(
     hass: HomeAssistant, entry: ConfigEntry
@@ -57,26 +53,4 @@ async def async_get_config_entry_diagnostics(
     diagnostics["plant_data"] = device.data
     diagnostics["consumptions_sequences"] = device.consumptions_sequences
     diagnostics["bus_errors"] = device.bus_errors_list
-    diagnostics["consumption_probe"] = await _async_probe_consumption(device)
     return diagnostics
-
-
-async def _async_probe_consumption(device: Any) -> dict[str, Any]:
-    """Call the consumption endpoint with several usage combinations."""
-    results: dict[str, Any] = {}
-    for usages in CONSUMPTION_USAGE_VARIANTS:
-        try:
-            sequences = await device.api.async_get_consumptions_sequences(
-                device.gw, usages
-            )
-        except Exception as err:  # noqa: BLE001 - diagnostics must not fail
-            results[usages] = {"error": f"{type(err).__name__}: {err}"}
-            continue
-
-        results[usages] = {
-            "sequences": len(sequences),
-            "keys": sorted({str(sequence.get("k")) for sequence in sequences}),
-            "sample": sequences[:1],
-        }
-
-    return results

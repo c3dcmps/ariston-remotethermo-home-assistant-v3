@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+from functools import partial
 import logging
+from typing import Any
 
 import voluptuous as vol
 
 from ariston import Ariston, DeviceAttribute, SystemType
+from ariston.base_device import AristonBaseDevice
 from ariston.const import ARISTON_API_URL, ARISTON_USER_AGENT
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
@@ -28,6 +31,7 @@ from .const import (
     BUS_ERRORS_COORDINATOR,
     BUS_ERRORS_SCAN_INTERVAL,
     CONF_BRAND,
+    CONSUMPTION_USAGE_VARIANTS,
     COORDINATOR,
     DEFAULT_BUS_ERRORS_SCAN_INTERVAL_SECONDS,
     DEFAULT_ENERGY_SCAN_INTERVAL_MINUTES,
@@ -64,6 +68,55 @@ SET_ITEM_BY_ID_SCHEMA = vol.Schema(
         vol.Required(ATTR_VALUE): vol.Coerce(float),
     }
 )
+
+
+def _publish_energy(device: AristonBaseDevice, sequences: list[Any]) -> None:
+    """Store the fetched consumption sequences and refresh the features."""
+    old_sequences = device.consumptions_sequences
+    device.consumptions_sequences = sequences
+    # ariston exposes no public API to publish the fetched sequences.
+    device._update_energy(old_sequences)  # noqa: SLF001
+
+
+async def _async_update_energy(
+    device: AristonBaseDevice, usages_cache: dict[str, str | None]
+) -> None:
+    """Update the energy data with the usages value the cloud accepts.
+
+    The consumption endpoint answers HTTP 500 for the usages value the
+    library sends on some BSB accounts. Try the known combinations, keep
+    the first one that returns data and remember it for the next refresh.
+    """
+    variants = (
+        [usages_cache["usages"]]
+        if usages_cache["usages"]
+        else CONSUMPTION_USAGE_VARIANTS
+    )
+    last_error: Exception | None = None
+    empty_result: list[Any] | None = None
+
+    for usages in variants:
+        try:
+            sequences = await device.api.async_get_consumptions_sequences(
+                device.gw, usages
+            )
+        except Exception as err:  # noqa: BLE001 - try the next combination
+            last_error = err
+            continue
+
+        if sequences:
+            usages_cache["usages"] = usages
+            _publish_energy(device, sequences)
+            return
+
+        empty_result = sequences
+
+    if empty_result is not None:
+        _publish_energy(device, empty_result)
+        return
+
+    if last_error is not None:
+        raise last_error
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -139,12 +192,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             energy_interval_minutes = entry.options.get(
                 ENERGY_SCAN_INTERVAL, DEFAULT_ENERGY_SCAN_INTERVAL_MINUTES
             )
+            usages_cache: dict[str, str | None] = {"usages": None}
             energy_coordinator = DeviceDataUpdateCoordinator(
                 hass,
                 device,
                 energy_interval_minutes * 60,
                 ENERGY_COORDINATOR,
-                device.async_update_energy,
+                partial(_async_update_energy, device, usages_cache),
                 config_entry=entry,
             )
             energy_coordinator.brand = brand
