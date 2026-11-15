@@ -41,6 +41,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.components.switch import SwitchEntityDescription
 from homeassistant.const import UnitOfEnergy, UnitOfTemperature, UnitOfTime
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import EntityCategory, EntityDescription
 from homeassistant.util import dt as dt_util
 
@@ -99,6 +100,29 @@ def _get_dhw_total_energy_today(entity: Any) -> float | None:
 def _get_local_day_start(_entity: Any) -> dt.datetime:
     """Return the local midnight when today's energy total started."""
     return dt_util.start_of_local_day()
+
+
+async def _set_bsb_dhw_reduced_temperature(entity: Any, value: float) -> None:
+    """Set the DHW reduced temperature without rewriting the comfort target.
+
+    ariston 0.19.14 passes the measured water temperature as the comfort
+    target in async_set_water_heater_reduced_temperature, which silently
+    overwrites the comfort setpoint. Send both setpoints explicitly.
+    """
+    device = entity.device
+    comfort = device.water_heater_target_temperature
+    if comfort is None:
+        raise HomeAssistantError(
+            "Cannot set the DHW reduced temperature: the comfort target is unknown"
+        )
+
+    await device.api.async_set_bsb_temperature(
+        device.gw,
+        comfort,
+        value,
+        comfort,
+        device.water_heater_reduced_temperature,
+    )
 
 
 @dataclass(kw_only=True, frozen=True)
@@ -1103,8 +1127,7 @@ ARISTON_NUMBER_TYPES: list[AristonNumberEntityDescription] = [
         get_native_max_value=lambda entity: entity.device.water_heater_reduced_maximum_temperature,
         get_native_step=lambda entity: entity.device.water_heater_reduced_temperature_step,
         get_native_value=lambda entity: entity.device.water_heater_reduced_temperature,
-        set_native_value=lambda entity,
-        value: entity.device.async_set_water_heater_reduced_temperature(value),
+        set_native_value=_set_bsb_dhw_reduced_temperature,
         system_types=[SystemType.BSB],
     ),
 ]
