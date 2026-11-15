@@ -73,14 +73,9 @@ DEFAULT_SCAN_INTERVAL_SECONDS: Final[int] = 180
 DEFAULT_ENERGY_SCAN_INTERVAL_MINUTES: Final[int] = 60
 DEFAULT_BUS_ERRORS_SCAN_INTERVAL_SECONDS: Final[int] = 600
 
-# The consumption endpoint answers HTTP 500 for the usages value the library
-# sends on some BSB accounts. Try these combinations until one is accepted.
-CONSUMPTION_USAGE_VARIANTS: Final[tuple[str, ...]] = (
-    "Ch,Dhw",
-    "Ch%2CDhw",
-    "Ch",
-    "Dhw",
-)
+# ariston sets no timeout on its async requests, so a stalled cloud call can
+# hang the setup forever. Bound the energy update.
+ENERGY_REQUEST_TIMEOUT_SECONDS: Final[int] = 30
 
 ATTR_TARGET_TEMP_STEP: Final[str] = "target_temp_step"
 ATTR_HEAT_REQUEST: Final[str] = "heat_request"
