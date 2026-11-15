@@ -4,7 +4,15 @@ from __future__ import annotations
 
 import logging
 
-from ariston.const import BsbDeviceProperties, BsbZoneMode, PlantMode, SystemType, ZoneMode
+from ariston.const import (
+    BsbDeviceProperties,
+    BsbZoneMode,
+    BsbZoneProperties,
+    PlantMode,
+    PropertyType,
+    SystemType,
+    ZoneMode,
+)
 from homeassistant.components.climate import (
     ClimateEntity,
     ClimateEntityFeature,
@@ -17,6 +25,8 @@ from homeassistant.core import HomeAssistant
 
 from .const import (
     ARISTON_CLIMATE_TYPES,
+    ATTR_ECONOMY_TEMP,
+    ATTR_HEAT_REQUEST,
     BSB_PRESET_COMFORT,
     BSB_PRESET_REDUCED,
     DOMAIN,
@@ -123,8 +133,19 @@ class AristonThermostat(AristonEntity, ClimateEntity):
         return self.device.get_target_temp_step(self.zone)
 
     @property
-    def native_current_temperature(self) -> float:
-        """Return the reported current temperature for the device."""
+    def native_current_temperature(self) -> float | None:
+        """Return the reported current temperature for the device.
+
+        A BSB zone without a room sensor reports 0 °C; return None instead
+        of publishing that value to the recorder.
+        """
+        if (
+            self.device.system_type == SystemType.BSB
+            and not self.device.get_zone(self.zone).get(
+                BsbZoneProperties.HAS_ROOM_SENS, False
+            )
+        ):
+            return None
         return self.device.get_measured_temp_value(self.zone)
 
     # Home Assistant < 2026.11 reads the deprecated name.
@@ -142,6 +163,28 @@ class AristonThermostat(AristonEntity, ClimateEntity):
 
     # Home Assistant < 2026.11 reads the deprecated name.
     target_temperature = native_target_temperature
+
+    @property
+    def extra_state_attributes(self):
+        """Return the zone details the generic attributes cannot read.
+
+        The shared climate description reads these from GALEVO-only device
+        methods, which a BSB device does not have.
+        """
+        if self.device.system_type != SystemType.BSB:
+            return super().extra_state_attributes
+
+        zone = self.device.get_zone(self.zone)
+        reduced = zone.get(BsbZoneProperties.CH_RED_TEMP) or {}
+        attributes = {
+            ATTR_HEAT_REQUEST: zone.get(BsbZoneProperties.HEAT_OR_COOL_REQ),
+            ATTR_ECONOMY_TEMP: reduced.get(PropertyType.VALUE),
+        }
+        return {
+            attribute: value
+            for attribute, value in attributes.items()
+            if value is not None
+        }
 
     @property
     def supported_features(self) -> int:
