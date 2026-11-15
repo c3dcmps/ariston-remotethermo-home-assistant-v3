@@ -154,14 +154,27 @@ def _get_local_day_start(_entity: Any) -> dt.datetime:
 
 def _get_data_point(entity: Any, address: int) -> float | None:
     """Return a numeric value read from the BSB data points."""
-    data = entity.coordinator.data or {}
+    data = (entity.coordinator.data or {}).get("data_points") or {}
     return (data.get(address) or {}).get("valueAsNumber")
 
 
 def _get_data_point_string(entity: Any, address: int) -> str | None:
     """Return a text value read from the BSB data points."""
-    data = entity.coordinator.data or {}
+    data = (entity.coordinator.data or {}).get("data_points") or {}
     return (data.get(address) or {}).get("valueAsString")
+
+
+def _get_property(entity: Any, item_id: str, item_value: str = "value") -> Any:
+    """Return a device property read from the data items endpoint."""
+    properties = (entity.coordinator.data or {}).get("properties") or {}
+    return next(
+        (
+            item.get(item_value)
+            for item in properties.get("items") or []
+            if item.get("id") == item_id and item.get("zone", 0) == 0
+        ),
+        None,
+    )
 
 
 def _get_cop(entity: Any, address: int) -> float | None:
@@ -878,6 +891,54 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         native_unit_of_measurement=UnitOfTemperature.CELSIUS,
         coordinator=BSB_DATA_COORDINATOR,
         get_native_value=lambda entity: _get_data_point(entity, BSB_ADDR_SUMMER_WINTER_LIMIT),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbChFlowTemp",
+        name=f"{NAME} CH flow temperature",
+        icon="mdi:thermometer-water",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_property(
+            entity, DeviceProperties.CH_FLOW_TEMP
+        ),
+        get_native_unit_of_measurement=lambda entity: _get_property(
+            entity, DeviceProperties.CH_FLOW_TEMP, "unit"
+        ),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbChFlowSetpointTemp",
+        name=f"{NAME} CH flow setpoint temperature",
+        icon="mdi:thermometer-chevron-up",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_property(
+            entity, DeviceProperties.CH_FLOW_SETPOINT_TEMP
+        ),
+        get_native_unit_of_measurement=lambda entity: _get_property(
+            entity, DeviceProperties.CH_FLOW_SETPOINT_TEMP, "unit"
+        ),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbHeatingCircuitPressure",
+        name=f"{NAME} heating circuit pressure",
+        icon="mdi:gauge",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.PRESSURE,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_property(
+            entity, DeviceProperties.HEATING_CIRCUIT_PRESSURE
+        ),
+        get_native_unit_of_measurement=lambda entity: _get_property(
+            entity, DeviceProperties.HEATING_CIRCUIT_PRESSURE, "unit"
+        ),
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(

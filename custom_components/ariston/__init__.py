@@ -87,14 +87,25 @@ def _r2_base_url(api_url: str) -> str:
     return api_url.split("/api/")[0].rstrip("/")
 
 
-async def _async_update_bsb_data_points(
-    device: AristonBaseDevice, client: R2Client
-) -> dict[int, dict[str, Any]]:
-    """Read the BSB energy counters through the web app."""
+async def _async_update_bsb_data(
+    device: AristonBaseDevice, client: R2Client, umsys: str
+) -> dict[str, Any]:
+    """Read the BSB data points and the device properties."""
     async with asyncio.timeout(BSB_DATA_REQUEST_TIMEOUT_SECONDS):
-        return await client.async_read_data_points(
+        data_points = await client.async_read_data_points(
             device.gw, list(BSB_DATA_POINT_ADDRESSES)
         )
+
+    properties: dict[str, Any] = {}
+    try:
+        async with asyncio.timeout(BSB_DATA_REQUEST_TIMEOUT_SECONDS):
+            properties = await device.api.async_get_properties(
+                device.gw, device.features, "en-US", umsys
+            )
+    except Exception as err:  # noqa: BLE001 - properties are optional
+        _LOGGER.debug("Device properties not available for %s: %s", device.name, err)
+
+    return {"data_points": data_points, "properties": properties}
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -201,7 +212,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 device,
                 DEFAULT_BSB_DATA_SCAN_INTERVAL_SECONDS,
                 BSB_DATA_COORDINATOR,
-                partial(_async_update_bsb_data_points, device, r2_client),
+                partial(
+                    _async_update_bsb_data,
+                    device,
+                    r2_client,
+                    "si" if hass.config.units is METRIC_SYSTEM else "us",
+                ),
                 config_entry=entry,
             )
             bsb_data_coordinator.brand = brand
