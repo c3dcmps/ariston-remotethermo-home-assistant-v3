@@ -11,7 +11,7 @@ from homeassistant.core import HomeAssistant
 
 from .const import COORDINATOR, DOMAIN
 
-TO_REDACT = {CONF_PASSWORD, CONF_USERNAME}
+TO_REDACT = {CONF_PASSWORD, CONF_USERNAME, "sn", "loc"}
 
 
 async def async_get_config_entry_diagnostics(
@@ -38,7 +38,7 @@ async def async_get_config_entry_diagnostics(
 
     if device is None:
         diagnostics["error"] = "The device is not available"
-        return diagnostics
+        return async_redact_data(diagnostics, TO_REDACT)
 
     diagnostics["device"] = {
         "system_type": device.system_type.name,
@@ -53,4 +53,4 @@ async def async_get_config_entry_diagnostics(
     diagnostics["plant_data"] = device.data
     diagnostics["consumptions_sequences"] = device.consumptions_sequences
     diagnostics["bus_errors"] = device.bus_errors_list
-    return diagnostics
+    return async_redact_data(diagnostics, TO_REDACT)
