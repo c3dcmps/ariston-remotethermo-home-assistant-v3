@@ -30,7 +30,7 @@ from .const import (
     API_USER_AGENT,
     BSB_DATA_COORDINATOR,
     BSB_DATA_REQUEST_TIMEOUT_SECONDS,
-    BSB_ENERGY_DATA_POINTS,
+    BSB_DATA_POINT_ADDRESSES,
     BUS_ERRORS_COORDINATOR,
     BUS_ERRORS_SCAN_INTERVAL,
     CONF_BRAND,
@@ -93,7 +93,7 @@ async def _async_update_bsb_data_points(
     """Read the BSB energy counters through the web app."""
     async with asyncio.timeout(BSB_DATA_REQUEST_TIMEOUT_SECONDS):
         return await client.async_read_data_points(
-            device.gw, list(BSB_ENERGY_DATA_POINTS)
+            device.gw, list(BSB_DATA_POINT_ADDRESSES)
         )
 
 

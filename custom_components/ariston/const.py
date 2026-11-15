@@ -40,7 +40,13 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.components.switch import SwitchEntityDescription
-from homeassistant.const import UnitOfEnergy, UnitOfTemperature, UnitOfTime
+from homeassistant.const import (
+    UnitOfEnergy,
+    UnitOfPower,
+    UnitOfTemperature,
+    UnitOfTime,
+    UnitOfVolumeFlowRate,
+)
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity import EntityCategory, EntityDescription
 from homeassistant.util import dt as dt_util
@@ -81,16 +87,41 @@ BSB_DATA_REQUEST_TIMEOUT_SECONDS: Final[int] = 30
 # hang the setup forever. Bound the energy update.
 ENERGY_REQUEST_TIMEOUT_SECONDS: Final[int] = 30
 
-# Addresses of the BSB energy meter counters, as read by the Remocon NET
-# web app on its "Compteur d'energie" page.
-BSB_ENERGY_DATA_POINTS: Final[dict[int, str]] = {
-    331907: "cop",
-    333491: "annual_cop",
-    333501: "heat_delivered_heating",
-    333511: "heat_delivered_dhw",
-    334191: "refrigeration_delivered",
-    333521: "energy_brought_in_heating",
-}
+# Addresses of the BSB data points read through the Remocon NET web app.
+# The names come from the user menu catalogue of the portal.
+BSB_ADDR_COP: Final[int] = 331907
+BSB_ADDR_ANNUAL_COP: Final[int] = 333491
+BSB_ADDR_HEAT_DELIVERED_HEATING: Final[int] = 333501
+BSB_ADDR_HEAT_DELIVERED_DHW: Final[int] = 333511
+BSB_ADDR_REFRIGERATION_DELIVERED: Final[int] = 334191
+BSB_ADDR_ENERGY_BROUGHT_IN_HEATING: Final[int] = 333521
+BSB_ADDR_CASCADE_COP: Final[int] = 334918
+BSB_ADDR_HEAT_OUTPUT: Final[int] = 334296
+BSB_ADDR_EVAPORATOR_INPUT: Final[int] = 334298
+BSB_ADDR_ELECTRIC_POWER: Final[int] = 334297
+BSB_ADDR_INSTANT_COP: Final[int] = 334299
+BSB_ADDR_HEAT_PUMP_FLOW_RATE: Final[int] = 332559
+BSB_ADDR_MESSAGE: Final[int] = 327836
+BSB_ADDR_HEATING_CURVE_SLOPE: Final[int] = 2950646
+BSB_ADDR_SUMMER_WINTER_LIMIT: Final[int] = 2950653
+
+BSB_DATA_POINT_ADDRESSES: Final[tuple[int, ...]] = (
+    BSB_ADDR_COP,
+    BSB_ADDR_ANNUAL_COP,
+    BSB_ADDR_HEAT_DELIVERED_HEATING,
+    BSB_ADDR_HEAT_DELIVERED_DHW,
+    BSB_ADDR_REFRIGERATION_DELIVERED,
+    BSB_ADDR_ENERGY_BROUGHT_IN_HEATING,
+    BSB_ADDR_CASCADE_COP,
+    BSB_ADDR_HEAT_OUTPUT,
+    BSB_ADDR_EVAPORATOR_INPUT,
+    BSB_ADDR_ELECTRIC_POWER,
+    BSB_ADDR_INSTANT_COP,
+    BSB_ADDR_HEAT_PUMP_FLOW_RATE,
+    BSB_ADDR_MESSAGE,
+    BSB_ADDR_HEATING_CURVE_SLOPE,
+    BSB_ADDR_SUMMER_WINTER_LIMIT,
+)
 
 ATTR_TARGET_TEMP_STEP: Final[str] = "target_temp_step"
 ATTR_HEAT_REQUEST: Final[str] = "heat_request"
@@ -122,9 +153,15 @@ def _get_local_day_start(_entity: Any) -> dt.datetime:
 
 
 def _get_data_point(entity: Any, address: int) -> float | None:
-    """Return a value read from the BSB data points."""
+    """Return a numeric value read from the BSB data points."""
     data = entity.coordinator.data or {}
     return (data.get(address) or {}).get("valueAsNumber")
+
+
+def _get_data_point_string(entity: Any, address: int) -> str | None:
+    """Return a text value read from the BSB data points."""
+    data = entity.coordinator.data or {}
+    return (data.get(address) or {}).get("valueAsString")
 
 
 def _get_cop(entity: Any, address: int) -> float | None:
@@ -686,7 +723,7 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         coordinator=BSB_DATA_COORDINATOR,
-        get_native_value=lambda entity: _get_data_point(entity, 333501),
+        get_native_value=lambda entity: _get_data_point(entity, BSB_ADDR_HEAT_DELIVERED_HEATING),
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(
@@ -698,7 +735,7 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         coordinator=BSB_DATA_COORDINATOR,
-        get_native_value=lambda entity: _get_data_point(entity, 333511),
+        get_native_value=lambda entity: _get_data_point(entity, BSB_ADDR_HEAT_DELIVERED_DHW),
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(
@@ -710,7 +747,7 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         coordinator=BSB_DATA_COORDINATOR,
-        get_native_value=lambda entity: _get_data_point(entity, 334191),
+        get_native_value=lambda entity: _get_data_point(entity, BSB_ADDR_REFRIGERATION_DELIVERED),
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(
@@ -722,7 +759,7 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         device_class=SensorDeviceClass.ENERGY,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
         coordinator=BSB_DATA_COORDINATOR,
-        get_native_value=lambda entity: _get_data_point(entity, 333521),
+        get_native_value=lambda entity: _get_data_point(entity, BSB_ADDR_ENERGY_BROUGHT_IN_HEATING),
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(
@@ -732,7 +769,7 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
         coordinator=BSB_DATA_COORDINATOR,
-        get_native_value=lambda entity: _get_cop(entity, 331907),
+        get_native_value=lambda entity: _get_cop(entity, BSB_ADDR_COP),
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(
@@ -742,7 +779,105 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         entity_category=EntityCategory.DIAGNOSTIC,
         state_class=SensorStateClass.MEASUREMENT,
         coordinator=BSB_DATA_COORDINATOR,
-        get_native_value=lambda entity: _get_cop(entity, 333491),
+        get_native_value=lambda entity: _get_cop(entity, BSB_ADDR_ANNUAL_COP),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbInstantCop",
+        name=f"{NAME} instantaneous COP",
+        icon="mdi:gauge",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_cop(entity, BSB_ADDR_INSTANT_COP),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbCascadeCop",
+        name=f"{NAME} cascade COP",
+        icon="mdi:gauge",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_cop(entity, BSB_ADDR_CASCADE_COP),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbElectricPower",
+        name=f"{NAME} electric power",
+        icon="mdi:flash",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.KILO_WATT,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_data_point(entity, BSB_ADDR_ELECTRIC_POWER),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbHeatOutput",
+        name=f"{NAME} heat output",
+        icon="mdi:heat-wave",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.KILO_WATT,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_data_point(entity, BSB_ADDR_HEAT_OUTPUT),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbEvaporatorInput",
+        name=f"{NAME} evaporator input",
+        icon="mdi:snowflake-thermometer",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.POWER,
+        native_unit_of_measurement=UnitOfPower.KILO_WATT,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_data_point(entity, BSB_ADDR_EVAPORATOR_INPUT),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbHeatPumpFlowRate",
+        name=f"{NAME} heat pump flow rate",
+        icon="mdi:waves-arrow-right",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        native_unit_of_measurement=UnitOfVolumeFlowRate.LITERS_PER_MINUTE,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_data_point(entity, BSB_ADDR_HEAT_PUMP_FLOW_RATE),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbMessage",
+        name=f"{NAME} message",
+        icon="mdi:message-alert-outline",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_data_point_string(entity, BSB_ADDR_MESSAGE),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbHeatingCurveSlope",
+        name=f"{NAME} heating curve slope",
+        icon="mdi:chart-bell-curve",
+        entity_category=EntityCategory.CONFIG,
+        state_class=SensorStateClass.MEASUREMENT,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_data_point(entity, BSB_ADDR_HEATING_CURVE_SLOPE),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbSummerWinterLimit",
+        name=f"{NAME} summer winter limit",
+        icon="mdi:thermometer-lines",
+        entity_category=EntityCategory.CONFIG,
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_data_point(entity, BSB_ADDR_SUMMER_WINTER_LIMIT),
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(
