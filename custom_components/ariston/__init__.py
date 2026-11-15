@@ -145,7 +145,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         )
         await bus_errors_coordinator.async_refresh()
 
-        if device.has_metering or device.system_type == SystemType.BSB:
+        if device.has_metering:
             energy_interval_minutes = entry.options.get(
                 ENERGY_SCAN_INTERVAL, DEFAULT_ENERGY_SCAN_INTERVAL_MINUTES
             )
