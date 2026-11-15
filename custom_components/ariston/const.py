@@ -43,6 +43,7 @@ from homeassistant.components.switch import SwitchEntityDescription
 from homeassistant.const import (
     UnitOfEnergy,
     UnitOfPower,
+    UnitOfPressure,
     UnitOfTemperature,
     UnitOfTime,
     UnitOfVolumeFlowRate,
@@ -906,7 +907,8 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         ),
         get_native_unit_of_measurement=lambda entity: _get_property(
             entity, DeviceProperties.CH_FLOW_TEMP, "unit"
-        ),
+        )
+        or UnitOfTemperature.CELSIUS,
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(
@@ -922,7 +924,8 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         ),
         get_native_unit_of_measurement=lambda entity: _get_property(
             entity, DeviceProperties.CH_FLOW_SETPOINT_TEMP, "unit"
-        ),
+        )
+        or UnitOfTemperature.CELSIUS,
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(
@@ -938,7 +941,8 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         ),
         get_native_unit_of_measurement=lambda entity: _get_property(
             entity, DeviceProperties.HEATING_CIRCUIT_PRESSURE, "unit"
-        ),
+        )
+        or UnitOfPressure.BAR,
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(

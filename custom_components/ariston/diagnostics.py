@@ -9,7 +9,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 
-from .const import COORDINATOR, DOMAIN
+from .const import BSB_DATA_COORDINATOR, COORDINATOR, DOMAIN
 
 TO_REDACT = {CONF_PASSWORD, CONF_USERNAME, "sn", "loc"}
 
@@ -53,4 +53,9 @@ async def async_get_config_entry_diagnostics(
     diagnostics["plant_data"] = device.data
     diagnostics["consumptions_sequences"] = device.consumptions_sequences
     diagnostics["bus_errors"] = device.bus_errors_list
+
+    bsb_coordinator = coordinators.get(BSB_DATA_COORDINATOR)
+    if bsb_coordinator is not None:
+        diagnostics["bsb_data"] = bsb_coordinator.data
+
     return async_redact_data(diagnostics, TO_REDACT)
