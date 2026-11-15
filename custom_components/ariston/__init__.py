@@ -19,7 +19,6 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-from homeassistant.helpers.update_coordinator import UpdateFailed
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.util.unit_system import METRIC_SYSTEM
 
@@ -61,7 +60,7 @@ SET_ITEM_BY_ID_SCHEMA = vol.Schema(
     {
         vol.Required(ATTR_DEVICE_ID): cv.string,
         vol.Required(ATTR_ITEM_ID): cv.string,
-        vol.Required(ATTR_ZONE): cv.positive_int,
+        vol.Required(ATTR_ZONE): vol.All(cv.positive_int, vol.Range(min=1)),
         vol.Required(ATTR_VALUE): vol.Coerce(float),
     }
 )
@@ -103,7 +102,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_SECONDS
         )
         coordinator = DeviceDataUpdateCoordinator(
-            hass, device, scan_interval_seconds, COORDINATOR, device.async_update_state
+            hass,
+            device,
+            scan_interval_seconds,
+            COORDINATOR,
+            device.async_update_state,
+            config_entry=entry,
         )
         coordinator.brand = brand
 
@@ -123,12 +127,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             bus_errors_scan_interval_seconds,
             BUS_ERRORS_COORDINATOR,
             device.async_get_bus_errors,
+            config_entry=entry,
         )
         bus_errors_coordinator.brand = brand
         hass.data[DOMAIN][entry.unique_id][BUS_ERRORS_COORDINATOR] = (
             bus_errors_coordinator
         )
-        await bus_errors_coordinator.async_config_entry_first_refresh()
+        await bus_errors_coordinator.async_refresh()
 
         if device.has_metering or device.system_type == SystemType.BSB:
             energy_interval_minutes = entry.options.get(
@@ -140,12 +145,13 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                 energy_interval_minutes * 60,
                 ENERGY_COORDINATOR,
                 device.async_update_energy,
+                config_entry=entry,
             )
             energy_coordinator.brand = brand
             hass.data[DOMAIN][entry.unique_id][ENERGY_COORDINATOR] = energy_coordinator
             try:
                 await energy_coordinator.async_config_entry_first_refresh()
-            except (UpdateFailed, Exception) as err:
+            except Exception as err:  # noqa: BLE001 - energy data is optional
                 _LOGGER.warning(
                     "Energy consumption data not available for %s: %s",
                     device.name,

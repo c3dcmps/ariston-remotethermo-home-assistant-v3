@@ -1,6 +1,7 @@
 {
   "domain": "ariston",
   "name": "Ariston / Elco",
+  "categories": ["climate.thermostats_heating", "climate.water_heaters"],
   "codeowners": ["@c3dcmps"],
   "config_flow": true,
   "dependencies": [],
@@ -9,8 +10,8 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/c3dcmps/ariston-remotethermo-home-assistant-v3/issues",
   "loggers": ["ariston"],
-  "requirements": ["ariston==0.19.9"],
+  "requirements": ["ariston==0.19.14"],
   "ssdp": [],
-  "version": "0.20.4",
+  "version": "0.20.5",
   "zeroconf": []
 }
