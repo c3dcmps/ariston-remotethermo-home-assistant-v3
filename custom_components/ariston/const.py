@@ -90,34 +90,24 @@ ENERGY_REQUEST_TIMEOUT_SECONDS: Final[int] = 30
 
 # Addresses of the BSB data points read through the Remocon NET web app.
 # The names come from the user menu catalogue of the portal.
-BSB_ADDR_COP: Final[int] = 331907
 BSB_ADDR_ANNUAL_COP: Final[int] = 333491
 BSB_ADDR_HEAT_DELIVERED_HEATING: Final[int] = 333501
 BSB_ADDR_HEAT_DELIVERED_DHW: Final[int] = 333511
 BSB_ADDR_REFRIGERATION_DELIVERED: Final[int] = 334191
 BSB_ADDR_ENERGY_BROUGHT_IN_HEATING: Final[int] = 333521
-BSB_ADDR_CASCADE_COP: Final[int] = 334918
 BSB_ADDR_HEAT_OUTPUT: Final[int] = 334296
-BSB_ADDR_EVAPORATOR_INPUT: Final[int] = 334298
-BSB_ADDR_ELECTRIC_POWER: Final[int] = 334297
-BSB_ADDR_INSTANT_COP: Final[int] = 334299
 BSB_ADDR_HEAT_PUMP_FLOW_RATE: Final[int] = 332559
 BSB_ADDR_MESSAGE: Final[int] = 327836
 BSB_ADDR_HEATING_CURVE_SLOPE: Final[int] = 2950646
 BSB_ADDR_SUMMER_WINTER_LIMIT: Final[int] = 2950653
 
 BSB_DATA_POINT_ADDRESSES: Final[tuple[int, ...]] = (
-    BSB_ADDR_COP,
     BSB_ADDR_ANNUAL_COP,
     BSB_ADDR_HEAT_DELIVERED_HEATING,
     BSB_ADDR_HEAT_DELIVERED_DHW,
     BSB_ADDR_REFRIGERATION_DELIVERED,
     BSB_ADDR_ENERGY_BROUGHT_IN_HEATING,
-    BSB_ADDR_CASCADE_COP,
     BSB_ADDR_HEAT_OUTPUT,
-    BSB_ADDR_EVAPORATOR_INPUT,
-    BSB_ADDR_ELECTRIC_POWER,
-    BSB_ADDR_INSTANT_COP,
     BSB_ADDR_HEAT_PUMP_FLOW_RATE,
     BSB_ADDR_MESSAGE,
     BSB_ADDR_HEATING_CURVE_SLOPE,
@@ -777,16 +767,6 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(
-        key="BsbCop",
-        name=f"{NAME} COP",
-        icon="mdi:gauge",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        state_class=SensorStateClass.MEASUREMENT,
-        coordinator=BSB_DATA_COORDINATOR,
-        get_native_value=lambda entity: _get_cop(entity, BSB_ADDR_COP),
-        system_types=[SystemType.BSB],
-    ),
-    AristonSensorEntityDescription(
         key="BsbAnnualCop",
         name=f"{NAME} annual COP",
         icon="mdi:gauge",
@@ -794,38 +774,6 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         state_class=SensorStateClass.MEASUREMENT,
         coordinator=BSB_DATA_COORDINATOR,
         get_native_value=lambda entity: _get_cop(entity, BSB_ADDR_ANNUAL_COP),
-        system_types=[SystemType.BSB],
-    ),
-    AristonSensorEntityDescription(
-        key="BsbInstantCop",
-        name=f"{NAME} instantaneous COP",
-        icon="mdi:gauge",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        state_class=SensorStateClass.MEASUREMENT,
-        coordinator=BSB_DATA_COORDINATOR,
-        get_native_value=lambda entity: _get_cop(entity, BSB_ADDR_INSTANT_COP),
-        system_types=[SystemType.BSB],
-    ),
-    AristonSensorEntityDescription(
-        key="BsbCascadeCop",
-        name=f"{NAME} cascade COP",
-        icon="mdi:gauge",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        state_class=SensorStateClass.MEASUREMENT,
-        coordinator=BSB_DATA_COORDINATOR,
-        get_native_value=lambda entity: _get_cop(entity, BSB_ADDR_CASCADE_COP),
-        system_types=[SystemType.BSB],
-    ),
-    AristonSensorEntityDescription(
-        key="BsbElectricPower",
-        name=f"{NAME} electric power",
-        icon="mdi:flash",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        state_class=SensorStateClass.MEASUREMENT,
-        device_class=SensorDeviceClass.POWER,
-        native_unit_of_measurement=UnitOfPower.KILO_WATT,
-        coordinator=BSB_DATA_COORDINATOR,
-        get_native_value=lambda entity: _get_data_point(entity, BSB_ADDR_ELECTRIC_POWER),
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(
@@ -838,18 +786,6 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         native_unit_of_measurement=UnitOfPower.KILO_WATT,
         coordinator=BSB_DATA_COORDINATOR,
         get_native_value=lambda entity: _get_data_point(entity, BSB_ADDR_HEAT_OUTPUT),
-        system_types=[SystemType.BSB],
-    ),
-    AristonSensorEntityDescription(
-        key="BsbEvaporatorInput",
-        name=f"{NAME} evaporator input",
-        icon="mdi:snowflake-thermometer",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        state_class=SensorStateClass.MEASUREMENT,
-        device_class=SensorDeviceClass.POWER,
-        native_unit_of_measurement=UnitOfPower.KILO_WATT,
-        coordinator=BSB_DATA_COORDINATOR,
-        get_native_value=lambda entity: _get_data_point(entity, BSB_ADDR_EVAPORATOR_INPUT),
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(
@@ -909,40 +845,6 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
             entity, DeviceProperties.CH_FLOW_TEMP, "unit"
         )
         or UnitOfTemperature.CELSIUS,
-        system_types=[SystemType.BSB],
-    ),
-    AristonSensorEntityDescription(
-        key="BsbChFlowSetpointTemp",
-        name=f"{NAME} CH flow setpoint temperature",
-        icon="mdi:thermometer-chevron-up",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        state_class=SensorStateClass.MEASUREMENT,
-        device_class=SensorDeviceClass.TEMPERATURE,
-        coordinator=BSB_DATA_COORDINATOR,
-        get_native_value=lambda entity: _get_property(
-            entity, DeviceProperties.CH_FLOW_SETPOINT_TEMP
-        ),
-        get_native_unit_of_measurement=lambda entity: _get_property(
-            entity, DeviceProperties.CH_FLOW_SETPOINT_TEMP, "unit"
-        )
-        or UnitOfTemperature.CELSIUS,
-        system_types=[SystemType.BSB],
-    ),
-    AristonSensorEntityDescription(
-        key="BsbHeatingCircuitPressure",
-        name=f"{NAME} heating circuit pressure",
-        icon="mdi:gauge",
-        entity_category=EntityCategory.DIAGNOSTIC,
-        state_class=SensorStateClass.MEASUREMENT,
-        device_class=SensorDeviceClass.PRESSURE,
-        coordinator=BSB_DATA_COORDINATOR,
-        get_native_value=lambda entity: _get_property(
-            entity, DeviceProperties.HEATING_CIRCUIT_PRESSURE
-        ),
-        get_native_unit_of_measurement=lambda entity: _get_property(
-            entity, DeviceProperties.HEATING_CIRCUIT_PRESSURE, "unit"
-        )
-        or UnitOfPressure.BAR,
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(
