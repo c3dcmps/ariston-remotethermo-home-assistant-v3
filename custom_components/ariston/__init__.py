@@ -28,20 +28,26 @@ from homeassistant.util.unit_system import METRIC_SYSTEM
 from .const import (
     API_URL_SETTING,
     API_USER_AGENT,
+    BSB_DATA_COORDINATOR,
+    BSB_DATA_REQUEST_TIMEOUT_SECONDS,
+    BSB_ENERGY_DATA_POINTS,
     BUS_ERRORS_COORDINATOR,
     BUS_ERRORS_SCAN_INTERVAL,
     CONF_BRAND,
-    ENERGY_REQUEST_TIMEOUT_SECONDS,
     COORDINATOR,
+    DEFAULT_BSB_DATA_SCAN_INTERVAL_SECONDS,
     DEFAULT_BUS_ERRORS_SCAN_INTERVAL_SECONDS,
     DEFAULT_ENERGY_SCAN_INTERVAL_MINUTES,
     DEFAULT_SCAN_INTERVAL_SECONDS,
     DOMAIN,
     ELCO_API_URL,
     ENERGY_COORDINATOR,
+    ENERGY_REQUEST_TIMEOUT_SECONDS,
     ENERGY_SCAN_INTERVAL,
+    R2_CLIENT,
 )
 from .coordinator import DeviceDataUpdateCoordinator
+from .r2 import R2Client
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -74,6 +80,21 @@ async def _async_update_energy(device: AristonBaseDevice) -> None:
     """Update the energy data with a bounded request time."""
     async with asyncio.timeout(ENERGY_REQUEST_TIMEOUT_SECONDS):
         await device.async_update_energy()
+
+
+def _r2_base_url(api_url: str) -> str:
+    """Return the web app base URL matching the configured API URL."""
+    return api_url.split("/api/")[0].rstrip("/")
+
+
+async def _async_update_bsb_data_points(
+    device: AristonBaseDevice, client: R2Client
+) -> dict[int, dict[str, Any]]:
+    """Read the BSB energy counters through the web app."""
+    async with asyncio.timeout(BSB_DATA_REQUEST_TIMEOUT_SECONDS):
+        return await client.async_read_data_points(
+            device.gw, list(BSB_ENERGY_DATA_POINTS)
+        )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -168,6 +189,27 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     err,
                 )
 
+        if device.system_type == SystemType.BSB:
+            r2_client = R2Client(
+                _r2_base_url(api_url_setting),
+                entry.data[CONF_USERNAME],
+                entry.data[CONF_PASSWORD],
+            )
+            hass.data[DOMAIN][entry.unique_id][R2_CLIENT] = r2_client
+            bsb_data_coordinator = DeviceDataUpdateCoordinator(
+                hass,
+                device,
+                DEFAULT_BSB_DATA_SCAN_INTERVAL_SECONDS,
+                BSB_DATA_COORDINATOR,
+                partial(_async_update_bsb_data_points, device, r2_client),
+                config_entry=entry,
+            )
+            bsb_data_coordinator.brand = brand
+            hass.data[DOMAIN][entry.unique_id][BSB_DATA_COORDINATOR] = (
+                bsb_data_coordinator
+            )
+            await bsb_data_coordinator.async_refresh()
+
         await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
         entry.async_on_unload(entry.add_update_listener(update_listener))
@@ -217,6 +259,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:
+        r2_client = hass.data[DOMAIN][entry.unique_id].get(R2_CLIENT)
+        if r2_client is not None:
+            await r2_client.async_close()
         hass.data[DOMAIN].pop(entry.unique_id)
 
     return unload_ok

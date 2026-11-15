@@ -72,10 +72,25 @@ BSB_PRESET_REDUCED: Final[str] = "Réduit"
 DEFAULT_SCAN_INTERVAL_SECONDS: Final[int] = 180
 DEFAULT_ENERGY_SCAN_INTERVAL_MINUTES: Final[int] = 60
 DEFAULT_BUS_ERRORS_SCAN_INTERVAL_SECONDS: Final[int] = 600
+DEFAULT_BSB_DATA_SCAN_INTERVAL_SECONDS: Final[int] = 900
+BSB_DATA_COORDINATOR: Final[str] = "bsb_data_coordinator"
+R2_CLIENT: Final[str] = "r2_client"
+BSB_DATA_REQUEST_TIMEOUT_SECONDS: Final[int] = 30
 
 # ariston sets no timeout on its async requests, so a stalled cloud call can
 # hang the setup forever. Bound the energy update.
 ENERGY_REQUEST_TIMEOUT_SECONDS: Final[int] = 30
+
+# Addresses of the BSB energy meter counters, as read by the Remocon NET
+# web app on its "Compteur d'energie" page.
+BSB_ENERGY_DATA_POINTS: Final[dict[int, str]] = {
+    331907: "cop",
+    333491: "annual_cop",
+    333501: "heat_delivered_heating",
+    333511: "heat_delivered_dhw",
+    334191: "refrigeration_delivered",
+    333521: "energy_brought_in_heating",
+}
 
 ATTR_TARGET_TEMP_STEP: Final[str] = "target_temp_step"
 ATTR_HEAT_REQUEST: Final[str] = "heat_request"
@@ -104,6 +119,18 @@ def _get_dhw_total_energy_today(entity: Any) -> float | None:
 def _get_local_day_start(_entity: Any) -> dt.datetime:
     """Return the local midnight when today's energy total started."""
     return dt_util.start_of_local_day()
+
+
+def _get_data_point(entity: Any, address: int) -> float | None:
+    """Return a value read from the BSB data points."""
+    data = entity.coordinator.data or {}
+    return (data.get(address) or {}).get("valueAsNumber")
+
+
+def _get_cop(entity: Any, address: int) -> float | None:
+    """Return a COP, treating zero as no value like the web app does."""
+    value = _get_data_point(entity, address)
+    return value or None
 
 
 async def _set_bsb_dhw_reduced_temperature(entity: Any, value: float) -> None:
@@ -648,6 +675,74 @@ ARISTON_SENSOR_TYPES: list[AristonSensorEntityDescription] = [
         coordinator=ENERGY_COORDINATOR,
         get_native_value=lambda entity: entity.device.domestic_hot_water_heating_pump_electricity_consumption,
         get_last_reset=lambda entity: entity.device.consumption_sequence_last_changed_utc,
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbHeatDeliveredHeating",
+        name=f"{NAME} heat delivered heating",
+        icon="mdi:heat-wave",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_data_point(entity, 333501),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbHeatDeliveredDhw",
+        name=f"{NAME} heat delivered DHW",
+        icon="mdi:water-boiler",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_data_point(entity, 333511),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbRefrigerationDelivered",
+        name=f"{NAME} refrigeration delivered",
+        icon="mdi:snowflake",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_data_point(entity, 334191),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbEnergyBroughtInHeating",
+        name=f"{NAME} energy brought in heating",
+        icon="mdi:transmission-tower-import",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.TOTAL_INCREASING,
+        device_class=SensorDeviceClass.ENERGY,
+        native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_data_point(entity, 333521),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbCop",
+        name=f"{NAME} COP",
+        icon="mdi:gauge",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_cop(entity, 331907),
+        system_types=[SystemType.BSB],
+    ),
+    AristonSensorEntityDescription(
+        key="BsbAnnualCop",
+        name=f"{NAME} annual COP",
+        icon="mdi:gauge",
+        entity_category=EntityCategory.DIAGNOSTIC,
+        state_class=SensorStateClass.MEASUREMENT,
+        coordinator=BSB_DATA_COORDINATOR,
+        get_native_value=lambda entity: _get_cop(entity, 333491),
         system_types=[SystemType.BSB],
     ),
     AristonSensorEntityDescription(
