@@ -71,9 +71,12 @@ class AristonWaterHeater(AristonEntity, WaterHeaterEntity):
         return "mdi:water-pump"
 
     @property
-    def current_temperature(self):
+    def native_current_temperature(self):
         """Return the temperature."""
         return self.device.water_heater_current_temperature
+
+    # Home Assistant < 2026.11 reads the deprecated name.
+    current_temperature = native_current_temperature
 
     @property
     def min_temp(self):
@@ -81,9 +84,12 @@ class AristonWaterHeater(AristonEntity, WaterHeaterEntity):
         return self.device.water_heater_minimum_temperature
 
     @property
-    def target_temperature(self):
+    def native_target_temperature(self):
         """Return the temperature we try to reach."""
         return self.device.water_heater_target_temperature
+
+    # Home Assistant < 2026.11 reads the deprecated name.
+    target_temperature = native_target_temperature
 
     @property
     def max_temp(self):
@@ -96,9 +102,12 @@ class AristonWaterHeater(AristonEntity, WaterHeaterEntity):
         return 1 / 10**self.device.water_heater_temperature_decimals
 
     @property
-    def temperature_unit(self):
+    def native_temperature_unit(self):
         """Return the unit of measurement."""
         return self.device.water_heater_temperature_unit
+
+    # Home Assistant < 2026.11 reads the deprecated name.
+    temperature_unit = native_temperature_unit
 
     @property
     def supported_features(self) -> int:

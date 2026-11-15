@@ -85,9 +85,12 @@ class AristonThermostat(AristonEntity, ClimateEntity):
         return "mdi:radiator-off"
 
     @property
-    def temperature_unit(self) -> str:
-        """Return the temperature units for the device."""
+    def native_temperature_unit(self) -> str:
+        """Return the temperature unit reported by the device."""
         return self.device.get_measured_temp_unit(self.zone)
+
+    # Home Assistant < 2026.11 reads the deprecated name.
+    temperature_unit = native_temperature_unit
 
     @property
     def precision(self) -> float:
@@ -120,12 +123,15 @@ class AristonThermostat(AristonEntity, ClimateEntity):
         return self.device.get_target_temp_step(self.zone)
 
     @property
-    def current_temperature(self) -> float:
+    def native_current_temperature(self) -> float:
         """Return the reported current temperature for the device."""
         return self.device.get_measured_temp_value(self.zone)
 
+    # Home Assistant < 2026.11 reads the deprecated name.
+    current_temperature = native_current_temperature
+
     @property
-    def target_temperature(self) -> float:
+    def native_target_temperature(self) -> float:
         """Return the target temperature for the device."""
         if (
             self.device.system_type == SystemType.BSB
@@ -133,6 +139,9 @@ class AristonThermostat(AristonEntity, ClimateEntity):
         ):
             return self.device.get_reduced_temp_value(self.zone)
         return self.device.get_target_temp_value(self.zone)
+
+    # Home Assistant < 2026.11 reads the deprecated name.
+    target_temperature = native_target_temperature
 
     @property
     def supported_features(self) -> int:
